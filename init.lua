@@ -154,6 +154,19 @@ vim.opt.cursorline = true
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 10
 
+-- Custom commands
+vim.api.nvim_create_user_command('CopyPath', function()
+  local path = vim.fn.expand '%:p'
+  vim.fn.setreg('+', path)
+  vim.notify('Copied "' .. path .. '" to the clipboard!')
+end, {})
+
+vim.api.nvim_create_user_command('CopyRelPath', function()
+  local path = vim.fn.expand '%'
+  vim.fn.setreg('+', path)
+  vim.notify('Copied "' .. path .. '" to the clipboard!')
+end, {})
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -539,7 +552,9 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
-        -- gopls = {},
+        gopls = {},
+        solargraph = {},
+        -- ruby_lsp = {},
         -- pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -623,10 +638,65 @@ require('lazy').setup({
         typescriptreact = { { 'prettierd', 'prettier' } },
         javascript = { { 'prettierd', 'prettier' } },
         javascriptreact = { { 'prettierd', 'prettier' } },
+        go = { { 'golangci-lint' } },
       },
     },
+    config = function()
+      local conform = require 'conform'
+      vim.keymap.set({ 'n', 'v' }, '<leader>mp', function()
+        conform.format {
+          lsp_fallback = true,
+          async = false,
+          timeout_ms = 500,
+        }
+      end, { desc = 'Format file or range (in visual mide)' })
+    end,
   },
+  {
+    'mfussenegger/nvim-lint',
+    event = {
+      "BufReadPre",
+      "BufNewFile",
+    },
+    config = function()
+      local lint = require("lint");
 
+      lint.linters_by_ft = {
+        go = { "golangcilint" },
+      }
+
+      local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
+
+      vim.api.nvim_create_autocmd({"BufEnter", "BufWritePost", "InsertLeave"}, {
+        group = lint_augroup,
+        callback = function()
+          lint.try_lint()
+        end
+      })
+
+      vim.keymap.set("n", "<leader>l", function()
+        lint.try_lint()
+      end, { desc = "Trigger linting for current file" })
+    end,
+  },
+  {
+    'gelguy/wilder.nvim',
+    config = function()
+      local wilder = require 'wilder'
+
+      wilder.setup { modes = { ':' } }
+
+      wilder.set_option(
+        'renderer',
+        wilder.popupmenu_renderer {
+          -- highlighter applies highlighting to the candidates
+          highlighter = wilder.basic_highlighter(),
+        }
+      )
+    end,
+  },
+  { 'hrsh7th/cmp-buffer' },
+  -- { 'hrsh7th/cmp-path' },
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
@@ -662,12 +732,34 @@ require('lazy').setup({
       --  into multiple repos for maintenance purposes.
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-path',
+      'hrsh7th/cmp-buffer',
     },
     config = function()
       -- See `:help cmp`
       local cmp = require 'cmp'
       local luasnip = require 'luasnip'
       luasnip.config.setup {}
+
+      cmp.setup.cmdline('/', {
+        mapping = cmp.mapping.preset.cmdline(),
+        sources = {
+          { name = 'buffer' },
+        },
+      })
+      -- -- Not sure why it isn't working
+      -- cmp.setup.cmdline(':', {
+      --   mapping = cmp.mapping.preset.cmdline(),
+      --   sources = cmp.config.sources({
+      --     { name = 'path' },
+      --   }, {
+      --     {
+      --       name = 'cmdline',
+      --       option = {
+      --         ignore_cmds = { 'Man', '!' },
+      --       },
+      --     },
+      --   }),
+      -- })
 
       cmp.setup {
         snippet = {
@@ -727,6 +819,7 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          -- { name = 'buffer' },
         },
       }
     end,
@@ -816,7 +909,7 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'ruby' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -850,6 +943,45 @@ require('lazy').setup({
       'nvim-tree/nvim-web-devicons', -- not strictly required, but recommended
       'MunifTanjim/nui.nvim',
       -- "3rd/image.nvim", -- Optional image support in preview window: See `# Preview Mode` for more information
+    },
+    vim.keymap.set('n', '<C-b>', '<Cmd>Neotree toggle<CR>'),
+  },
+  { 'tpope/vim-fugitive' },
+  { 'tpope/vim-rails' },
+
+  -- Testing
+  {
+    'nvim-neotest/neotest',
+    -- lazy = true,
+    dependencies = {
+      'nvim-neotest/nvim-nio',
+      'nvim-lua/plenary.nvim',
+      'antoinemadec/FixCursorHold.nvim',
+      'nvim-treesitter/nvim-treesitter',
+      'olimorris/neotest-rspec',
+    },
+    config = function()
+      require('neotest').setup {
+        adapters = {
+          require 'neotest-rspec',
+        },
+      }
+    end,
+    keys = {
+      {
+        '<leader>tf',
+        function()
+          require('neotest').run.run(vim.fn.expand '%')
+        end,
+        desc = 'Test file',
+      },
+      {
+        '<leader>to',
+        function()
+          require('neotest').output.open()
+        end,
+        desc = 'Open output',
+      },
     },
   },
 
