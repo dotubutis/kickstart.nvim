@@ -367,6 +367,7 @@ require('lazy').setup({
               ['<C-d>'] = require('telescope.actions').delete_buffer,
             },
           },
+          file_ignore_patterns = { 'node_modules' },
         },
         -- pickers = {}
         extensions = {
