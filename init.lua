@@ -286,7 +286,7 @@ require('lazy').setup({
   -- after the plugin has been loaded:
   --  config = function() ... end
 
-  { -- Useful plugin to show you pending keybinds.
+  {                     -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     config = function() -- This is the function that runs, AFTER loading
@@ -332,7 +332,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -364,12 +364,16 @@ require('lazy').setup({
           mappings = {
             i = {
               ['<c-enter>'] = 'to_fuzzy_refine',
-              ['<C-d>'] = require('telescope.actions').delete_buffer,
+              ["<C-d>"] = require("telescope.actions").delete_buffer,
             },
           },
-          file_ignore_patterns = { 'node_modules' },
         },
         -- pickers = {}
+        pickers = {
+          find_files = {
+            find_command = {"rg", "--files", "--sortr=modified"}
+          }
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -383,6 +387,8 @@ require('lazy').setup({
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
+      -- local actions = require 'telescope.actions'
+      -- vim.keymap.set('i', '<C-d>', actions.delete_buffer, { buffer = true, desc = 'Delete buffer' })
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
@@ -392,6 +398,8 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>sb', builtin.git_branches, { desc = '[S]earch Git Branches' })
+      vim.keymap.set('n', '<leader>st', builtin.git_status, { desc = '[S]earch Git Status' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -416,6 +424,56 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+
+    end,
+  },
+  {
+    "nvim-telescope/telescope-frecency.nvim",
+    config = function()
+      require("telescope").setup({
+        extensions = {
+          frecency = {
+            show_scores = true,
+            -- Show the path of the active filter before file paths.
+            -- So if I'm in the `dotfiles-latest` directory it will show me that
+            -- before the name of the file
+            show_filter_column = false,
+          },
+        },
+      })
+      require("telescope").load_extension("frecency")
+    end,
+  },
+  {
+    "debugloop/telescope-undo.nvim",
+    dependencies = { -- note how they're inverted to above example
+      {
+        "nvim-telescope/telescope.nvim",
+        dependencies = { "nvim-lua/plenary.nvim" },
+      },
+    },
+    keys = {
+      { -- lazy style key map
+        "<leader>u",
+        "<cmd>Telescope undo<cr>",
+        desc = "undo history",
+      },
+    },
+    opts = {
+      -- don't use `defaults = { }` here, do this in the main telescope spec
+      extensions = {
+        undo = {
+          -- telescope-undo.nvim config, see below
+        },
+        -- no other extensions here, they can have their own spec too
+      },
+    },
+    config = function(_, opts)
+      -- Calling telescope's setup from multiple specs does not hurt, it will happily merge the
+      -- configs for us. We won't use data, as everything is in it's own namespace (telescope
+      -- defaults, as well as each extension).
+      require("telescope").setup(opts)
+      require("telescope").load_extension("undo")
     end,
   },
 
@@ -557,8 +615,8 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         gopls = {},
+        -- buf = {},
         solargraph = {},
-        -- ruby_lsp = {},
         -- pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -616,44 +674,67 @@ require('lazy').setup({
       }
     end,
   },
-
-  { -- Autoformat
-    'stevearc/conform.nvim',
+  {
+    "stevearc/conform.nvim",
+    event = { "BufWritePre" },
+    cmd = { "ConformInfo" },
+    keys = {
+      {
+        -- Customize or remove this keymap to your liking
+        "<leader>f",
+        function()
+          require("conform").format({ async = true })
+        end,
+        mode = "",
+        desc = "Format buffer",
+      },
+    },
+    -- This will provide type hinting with LuaLS
+    ---@module "conform"
+    ---@type conform.setupOpts
     opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        return {
-          timeout_ms = 500,
-          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-        }
-      end,
+      -- Define your formatters
       formatters_by_ft = {
-        lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use a sub-list to tell conform to run *until* a formatter
-        -- is found.
+        lua = { "stylua" },
+        python = { "isort", "black" },
         typescript = { { 'prettierd', 'prettier' } },
         typescriptreact = { { 'prettierd', 'prettier' } },
         javascript = { { 'prettierd', 'prettier' } },
         javascriptreact = { { 'prettierd', 'prettier' } },
-        go = { { 'golangci-lint' } },
+        go = { 'gofmt', 'goimports' },
+        ruby = { 'rubocop' },
+      },
+      -- Set default options
+      default_format_opts = {
+        lsp_format = "fallback",
+      },
+      -- Set up format-on-save
+      format_on_save = { timeout_ms = 500 },
+      -- Customize formatters
+      formatters = {
+        rubocop = function()
+          return {
+            command = "bundle",
+            args = {
+              "exec",
+              "rubocop",
+              "--server",
+              "--fix-layout",
+              "--autocorrect-all",
+              "--format",
+              "files",
+              "--stderr",
+              "--stdin",
+              "$FILENAME",
+            },
+            stdin = true,
+          }
+        end,
       },
     },
-    config = function()
-      local conform = require 'conform'
-      vim.keymap.set({ 'n', 'v' }, '<leader>mp', function()
-        conform.format {
-          lsp_fallback = true,
-          async = false,
-          timeout_ms = 500,
-        }
-      end, { desc = 'Format file or range (in visual mide)' })
+    init = function()
+      -- If you want the formatexpr, here is the place to set it
+      vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
     end,
   },
   {
@@ -667,18 +748,19 @@ require('lazy').setup({
 
       lint.linters_by_ft = {
         go = { "golangcilint" },
+        ruby = { "rubocop" },
       }
 
       local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
 
-      vim.api.nvim_create_autocmd({"BufEnter", "BufWritePost", "InsertLeave"}, {
+      vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
         group = lint_augroup,
         callback = function()
           lint.try_lint()
         end
       })
 
-      vim.keymap.set("n", "<leader>l", function()
+      vim.keymap.set("n", "<leader>ll", function()
         lint.try_lint()
       end, { desc = "Trigger linting for current file" })
     end,
@@ -846,11 +928,11 @@ require('lazy').setup({
       vim.cmd.hi 'Comment gui=none'
     end,
   },
-  { 'catppuccin/nvim', name = 'catppuccin', priority = 1000 },
+  { 'catppuccin/nvim',          name = 'catppuccin', priority = 1000 },
   {
     'romgrk/barbar.nvim',
     dependencies = {
-      'lewis6991/gitsigns.nvim', -- OPTIONAL: for git status
+      'lewis6991/gitsigns.nvim',     -- OPTIONAL: for git status
       'nvim-tree/nvim-web-devicons', -- OPTIONAL: for file icons
     },
     init = function()
@@ -863,12 +945,18 @@ require('lazy').setup({
       -- …etc.
     },
     version = '^1.0.0', -- optional: only update when a new 1.x version is released
+    vim.keymap.set('n', '<A-,>', '<Cmd>BufferPrevious<CR>'),
+    vim.keymap.set('n', '<A-.>', '<Cmd>BufferNext<CR>'),
+    vim.keymap.set('n', '<A-p>', '<Cmd>BufferPin<CR>'),
+    vim.keymap.set('n', '<C-p>', '<Cmd>BufferPick<CR>'),
+    vim.keymap.set('n', '<A-<>', '<Cmd>BufferMovePrevious<CR>'),
+    vim.keymap.set('n', '<A->>', '<Cmd>BufferMoveNext<CR>')
   },
   {
     'nvim-tree/nvim-web-devicons',
   },
   -- Highlight todo, notes, etc in comments
-  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
+  { 'folke/todo-comments.nvim', event = 'VimEnter',  dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
@@ -948,45 +1036,104 @@ require('lazy').setup({
       'MunifTanjim/nui.nvim',
       -- "3rd/image.nvim", -- Optional image support in preview window: See `# Preview Mode` for more information
     },
-    vim.keymap.set('n', '<C-b>', '<Cmd>Neotree toggle<CR>'),
+    vim.keymap.set('n', '<C-b>', '<Cmd>Neotree reveal float<CR>'),
   },
   { 'tpope/vim-fugitive' },
   { 'tpope/vim-rails' },
+  {
+    'zbirenbaum/copilot.lua',
+    cmd = "Copilot",
+    event = "InsertEnter",
+    config = function()
+      require("copilot").setup({
+        suggestion = {
+          enabled = true,
+          auto_trigger = true,
+          debounce = 75,
+          keymap = {
+            accept = "<M-l>",
+            accept_word = false,
+            accept_line = false,
+            next = "<M-]>",
+            prev = "<M-[>",
+            dismiss = "<C-]>",
+          },
+        },
+      })
+    end,
+  },
 
   -- Testing
   {
     'nvim-neotest/neotest',
-    -- lazy = true,
+    lazy = false,
     dependencies = {
       'nvim-neotest/nvim-nio',
       'nvim-lua/plenary.nvim',
       'antoinemadec/FixCursorHold.nvim',
       'nvim-treesitter/nvim-treesitter',
       'olimorris/neotest-rspec',
+      'fredrikaverpil/neotest-golang'
     },
     config = function()
       require('neotest').setup {
         adapters = {
-          require 'neotest-rspec',
+          require('neotest-rspec'),
+          require('neotest-golang'),
         },
       }
     end,
     keys = {
-      {
-        '<leader>tf',
-        function()
-          require('neotest').run.run(vim.fn.expand '%')
-        end,
-        desc = 'Test file',
-      },
-      {
-        '<leader>to',
-        function()
-          require('neotest').output.open()
-        end,
-        desc = 'Open output',
-      },
+      -- {
+      --   '<leader>tf',
+      --   function()
+      --     require('neotest').run.run(vim.fn.expand '%')
+      --   end,
+      --   desc = 'Test file',
+      -- },
+      -- {
+      --   '<leader>to',
+      --   function()
+      --     require('neotest').output.open()
+      --   end,
+      --   desc = 'Open output',
+      -- },
+      -- {
+      --   "<leader>td",
+      --   function()
+      --     require("neotest").run.run({ suite = false, strategy = "dap" })
+      --   end,
+      --   desc = "Debug nearest test",
+      -- },
     },
+    vim.keymap.set('n', '<leader>tf', function() require('neotest').run.run(vim.fn.expand '%') end, { desc = 'Test file' }),
+    vim.keymap.set('n', '<leader>tl', function() require('neotest').run.run() end, { desc = 'Test line' }),
+    vim.keymap.set('n', '<leader>ts', function() require('neotest').summary.toggle() end, { desc = 'Test summary' }),
+    vim.keymap.set('n', '<leader>to', function() require('neotest').output.open() end, { desc = 'Open output' }),
+    vim.keymap.set('n', '<leader>tp', function() require('neotest').output_panel.toggle() end, { desc = 'Toggle output panel' }),
+    vim.keymap.set('n', '<leader>ta', function() require('neotest').run.attach() end, { desc = 'Attach to the nearest test' })
+  },
+  {
+    'almo7aya/openingh.nvim',
+  },
+  {
+      "kdheepak/lazygit.nvim",
+    cmd = {
+      "LazyGit",
+      "LazyGitConfig",
+      "LazyGitCurrentFile",
+      "LazyGitFilter",
+      "LazyGitFilterCurrentFile",
+    },
+    -- optional for floating window border decoration
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+    -- setting the keybinding for LazyGit with 'keys' is recommended in
+    -- order to load the plugin when the command is run for the first time
+    keys = {
+      { "<leader>lg", "<cmd>LazyGit<cr>", desc = "LazyGit" }
+    }
   },
 
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
