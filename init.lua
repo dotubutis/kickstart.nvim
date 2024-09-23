@@ -703,6 +703,7 @@ require('lazy').setup({
         javascriptreact = { { 'prettierd', 'prettier' } },
         go = { 'gofmt', 'goimports' },
         ruby = { 'rubocop' },
+        json = { 'jq' },
       },
       -- Set default options
       default_format_opts = {
