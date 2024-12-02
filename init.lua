@@ -710,7 +710,7 @@ require('lazy').setup({
         lsp_format = 'fallback',
       },
       -- Set up format-on-save
-      format_on_save = { timeout_ms = 500 },
+      format_on_save = { timeout_ms = 2000 },
       -- Customize formatters
       formatters = {
         rubocop = function()
@@ -719,11 +719,9 @@ require('lazy').setup({
             args = {
               'exec',
               'rubocop',
-              '--server',
-              '--fix-layout',
-              '--autocorrect-all',
-              '--format',
-              'files',
+              '-a',
+              -- '--format',
+              -- 'files',
               '--stderr',
               '--stdin',
               '$FILENAME',
@@ -923,7 +921,7 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'tokyonight-moon'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
@@ -1052,12 +1050,13 @@ require('lazy').setup({
           auto_trigger = true,
           debounce = 75,
           keymap = {
-            accept = '<M-l>',
-            accept_word = false,
+            -- accept = '<M-l>',
+            accept = '<M-Tab>',
+            accept_word = '<M-Right>',
             accept_line = false,
             next = '<M-]>',
             prev = '<M-[>',
-            dismiss = '<C-]>',
+            dismiss = '<M-\\>',
           },
         },
       }
