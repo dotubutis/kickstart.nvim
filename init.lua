@@ -408,6 +408,13 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>st', builtin.git_status, { desc = '[S]earch Git Status' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
+      -- Resume the last search
+      vim.keymap.set('n', '<leader>sx', require('telescope.builtin').resume, {
+        noremap = true,
+        silent = true,
+        desc = 'Resume',
+      })
+
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
         -- You can pass additional configuration to Telescope to change the theme, layout, etc.
@@ -649,6 +656,7 @@ require('lazy').setup({
         --
         -- But for many setups, the LSP (`tsserver`) will work just fine
         ts_ls = {},
+        eslint = {},
         --
 
         lua_ls = {
@@ -725,7 +733,7 @@ require('lazy').setup({
         javascript = { { 'prettierd', 'prettier' } },
         javascriptreact = { { 'prettierd', 'prettier' } },
         go = { 'gofmt', 'goimports' },
-        ruby = { 'rubocop' },
+        -- ruby = { 'rubocop' },
         json = { 'jq' },
       },
       -- Set default options
@@ -733,26 +741,26 @@ require('lazy').setup({
         lsp_format = 'fallback',
       },
       -- Set up format-on-save
-      format_on_save = { timeout_ms = 2000 },
+      -- format_on_save = { timeout_ms = 2000 },
       -- Customize formatters
-      formatters = {
-        rubocop = function()
-          return {
-            command = 'bundle',
-            args = {
-              'exec',
-              'rubocop',
-              '-a',
-              -- '--format',
-              -- 'files',
-              '--stderr',
-              '--stdin',
-              '$FILENAME',
-            },
-            stdin = true,
-          }
-        end,
-      },
+      -- formatters = {
+      --   rubocop = function()
+      --     return {
+      --       command = 'bundle',
+      --       args = {
+      --         'exec',
+      --         'rubocop',
+      --         '-a',
+      --         -- '--format',
+      --         -- 'files',
+      --         '--stderr',
+      --         '--stdin',
+      --         '$FILENAME',
+      --       },
+      --       stdin = true,
+      --     }
+      --   end,
+      -- },
     },
     init = function()
       -- If you want the formatexpr, here is the place to set it
@@ -770,7 +778,7 @@ require('lazy').setup({
 
       lint.linters_by_ft = {
         go = { 'golangcilint' },
-        ruby = { 'rubocop' },
+        -- ruby = { 'rubocop' },
       }
 
       local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
@@ -1023,7 +1031,7 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'ruby' },
+      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'ruby', 'yaml' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
