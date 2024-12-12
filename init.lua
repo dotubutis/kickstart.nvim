@@ -807,6 +807,8 @@ require('lazy').setup({
 
       lint.linters_by_ft = {
         go = { 'golangcilint' },
+        javascript = { 'eslint' },
+        typescript = { 'eslint' },
         -- ruby = { 'rubocop' },
       }
 
