@@ -1124,8 +1124,8 @@ require('lazy').setup({
       require('nvim-ts-autotag').setup()
     end,
   },
-  { 'tpope/vim-fugitive' },
-  { 'tpope/vim-rails' },
+  -- { 'tpope/vim-fugitive' },
+  -- { 'tpope/vim-rails' },
   {
     'zbirenbaum/copilot.lua',
     cmd = 'Copilot',
